@@ -9,27 +9,11 @@ export default function OrderProcessingScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  // Mock initial state for demo
-  const [status, setStatus] = useState('Accepted'); // 'Accepted', 'Preparing', 'Ready'
-
-  const handleStartPreparing = () => {
-    setStatus('Preparing');
-    Alert.alert("Status Updated", "Order is now in Preparing state.");
-  };
+  const [status, setStatus] = useState<'Accepted' | 'Ready'>('Accepted');
 
   const handleMarkReady = () => {
     setStatus('Ready');
-    Alert.alert("Status Updated", "Order is marked as Ready!");
-  };
-
-  const getStatusColor = (currentStep: string) => {
-    const sequence = ['Accepted', 'Preparing', 'Ready'];
-    const currentIndex = sequence.indexOf(status);
-    const stepIndex = sequence.indexOf(currentStep);
-
-    if (stepIndex < currentIndex) return Colors.default.primary; // Completed
-    if (stepIndex === currentIndex) return '#ff8c00'; // Active
-    return '#ccc'; // Pending
+    Alert.alert('Status Updated', 'Order is marked as Ready!');
   };
 
   return (
@@ -39,7 +23,6 @@ export default function OrderProcessingScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -71,49 +54,14 @@ export default function OrderProcessingScreen() {
 
           <View style={styles.divider} />
 
-          {/* Status Tracker */}
-          <Text style={styles.detailLabel}>Order Journey</Text>
-          <View style={styles.trackerContainer}>
-            <View style={[styles.trackerDot, { backgroundColor: getStatusColor('Accepted') }]} />
-            <View style={[styles.trackerLine, { backgroundColor: getStatusColor('Preparing') }]} />
-            <View style={[styles.trackerDot, { backgroundColor: getStatusColor('Preparing') }]} />
-            <View style={[styles.trackerLine, { backgroundColor: getStatusColor('Ready') }]} />
-            <View style={[styles.trackerDot, { backgroundColor: getStatusColor('Ready') }]} />
-          </View>
-
-          <View style={styles.trackerLabels}>
-            <Text style={[styles.trackerLabel, { color: getStatusColor('Accepted') }]}>Accepted</Text>
-            <Text style={[styles.trackerLabel, { color: getStatusColor('Preparing'), textAlign: 'center' }]}>Preparing</Text>
-            <Text style={[styles.trackerLabel, { color: getStatusColor('Ready'), textAlign: 'right' }]}>Ready</Text>
-          </View>
-
-          <View style={styles.divider} />
-
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.actionBtn, 
-                status !== 'Accepted' && styles.actionBtnDisabled
-              ]} 
-              onPress={handleStartPreparing}
-              disabled={status !== 'Accepted'}
-            >
-              <Text style={styles.actionBtnText}>Start Preparing</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[
-                styles.actionBtn, 
-                styles.actionBtnSecondary,
-                status !== 'Preparing' && styles.actionBtnDisabled
-              ]} 
+            <TouchableOpacity
+              style={[styles.actionBtn, status === 'Ready' && styles.actionBtnDisabled]}
               onPress={handleMarkReady}
-              disabled={status !== 'Preparing'}
+              disabled={status === 'Ready'}
             >
-              <Text style={[styles.actionBtnText, { color: Colors.default.primary }]}>
-                Mark as Ready
-              </Text>
+              <Text style={styles.actionBtnText}>Mark as Ready</Text>
             </TouchableOpacity>
           </View>
 
@@ -137,11 +85,6 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     padding: 5,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
   },
   container: {
     padding: 20,
@@ -215,32 +158,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#555',
   },
-  trackerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    marginHorizontal: 10,
-  },
-  trackerDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  trackerLine: {
-    flex: 1,
-    height: 3,
-  },
-  trackerLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  trackerLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
   actionsContainer: {
     marginTop: 10,
   },
@@ -250,11 +167,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     marginBottom: 12,
-  },
-  actionBtnSecondary: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: Colors.default.primary,
   },
   actionBtnDisabled: {
     opacity: 0.4,

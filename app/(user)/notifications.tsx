@@ -23,8 +23,6 @@ export default function NotificationsScreen() {
   return (
     <LinearGradient colors={["#FEEDE6", "#FFFFFF"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.screenTitle}>Notifications</Text>
-        
         <View style={styles.listContainer}>
           {notifications.map((notif) => {
             const { name, color } = getIconAndColor(notif.type);
@@ -49,8 +47,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { padding: 20, paddingTop: 50 },
-  screenTitle: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 20 },
-  
   listContainer: { gap: 15 },
   notificationCard: {
     flexDirection: 'row',

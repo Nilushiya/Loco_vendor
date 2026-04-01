@@ -12,8 +12,6 @@ export default function AnalyticsScreen() {
   return (
     <LinearGradient colors={["#FEEDE6", "#FFFFFF"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.screenTitle}>Analytics</Text>
-
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Today Sales</Text>
           <Text style={styles.salesValue}>Rs. 12,500</Text>
@@ -62,8 +60,6 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { padding: 20, paddingTop: 50 },
-  screenTitle: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 20 },
-  
   card: {
     backgroundColor: '#fff',
     borderRadius: 15,

@@ -16,10 +16,6 @@ export default function ProfileScreen() {
   return (
     <LinearGradient colors={["#FEEDE6", "#FFFFFF"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.screenTitle}>Restaurant Profile</Text>
-        </View>
-
         <View style={styles.profileCard}>
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="restaurant" size={40} color={Colors.default.primary} />
@@ -55,9 +51,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { padding: 20, paddingTop: 50 },
-  header: { marginBottom: 30 },
-  screenTitle: { fontSize: 28, fontWeight: 'bold', color: '#333' },
-  
   profileCard: {
     backgroundColor: '#fff',
     borderRadius: 20,

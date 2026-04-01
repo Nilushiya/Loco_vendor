@@ -5,14 +5,14 @@ import React, { useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/theme';
 
-const TABS = ['New', 'Preparing', 'Ready', 'Completed'];
+const TABS = ['New', 'Ready', 'Completed'];
 
 // Mock Data
 const MOCK_ORDERS = [
   { id: '1234', items: 'Chicken Rice x2', total: 'Rs. 1200', status: 'New', customer: 'John' },
   { id: '1235', items: 'Fried Rice x1, Coke x1', total: 'Rs. 850', status: 'New', customer: 'Alice' },
-  { id: '1236', items: 'Noodles x2', total: 'Rs. 1000', status: 'Preparing', customer: 'Bob' },
-  { id: '1237', items: 'Chicken Kottu x1', total: 'Rs. 1500', status: 'Ready', customer: 'Emma' },
+  { id: '1236', items: 'Noodles x2', total: 'Rs. 1000', status: 'Ready', customer: 'Bob' },
+  { id: '1237', items: 'Chicken Kottu x1', total: 'Rs. 1500', status: 'Completed', customer: 'Emma' },
 ];
 
 export default function OrdersScreen() {
@@ -84,8 +84,6 @@ export default function OrdersScreen() {
   return (
     <LinearGradient colors={["#FEEDE6", "#FFFFFF"]} style={styles.gradient}>
       <View style={styles.container}>
-        <Text style={styles.headerTitle}>Orders</Text>
-
         {/* Custom Tabs */}
         <View style={styles.tabContainer}>
           {TABS.map((tab) => (
@@ -128,13 +126,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 50,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    paddingHorizontal: 20,
-    marginBottom: 15,
   },
   tabContainer: {
     flexDirection: 'row',

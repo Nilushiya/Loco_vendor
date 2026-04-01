@@ -15,10 +15,7 @@ export default function Dashboard() {
         
         {/* Header section with Open/Close Toggle */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Vendor Dashboard</Text>
-            <Text style={styles.subtitle}>Welcome back, Loco Vendor!</Text>
-          </View>
+          <Text style={styles.subtitle}>Welcome back, Loco Vendor!</Text>
           <View style={styles.toggleContainer}>
             <Text style={[styles.statusText, { color: isOpen ? Colors.default.primary : 'gray' }]}>
               {isOpen ? "🟢 OPEN" : "🔴 CLOSED"}
@@ -117,11 +114,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 25,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
   },
   subtitle: {
     fontSize: 14,
