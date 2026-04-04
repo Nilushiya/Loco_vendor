@@ -2,6 +2,7 @@ import apiClient from './client';
 import { ENDPOINTS } from '../constants/Config';
 import { startLoading, authSuccess, authFailure } from '../redux/slices/authSlice';
 import * as SecureStore from 'expo-secure-store';
+import { Buffer } from 'buffer';
 
 const decodeBase64Url = (value) => {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
