@@ -35,6 +35,7 @@ apiClient.interceptors.response.use(
       console.log("Unauthorized or Forbidden - Logging out...");
 
       await SecureStore.deleteItemAsync('userToken');
+      await SecureStore.deleteItemAsync('userId');
       await SecureStore.deleteItemAsync('userRole');
       
       // Clear the Redux state

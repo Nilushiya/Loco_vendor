@@ -40,20 +40,23 @@ const authService = {
       }
 
       const decodedToken = decodeJwtPayload(token);
+      const id = decodedToken?.id ?? null;
       const role = decodedToken?.role || 'RESTAURANT';
 
       console.log("Received token:", token);
       console.log("Decoded token payload:", decodedToken);
+      console.log("Received id:", id);
       console.log("Received role:", role);
 
       // Save to Secure Storage so the session persists
       await SecureStore.setItemAsync('userToken', token);
+      await SecureStore.setItemAsync('userId', String(id));
       await SecureStore.setItemAsync('userRole', role);
 
       //  Update Redux state
-      dispatch(authSuccess({ token, role }));
-      console.log("Auth state updated in Redux with token and role.", { token, role });
-      return { token, role };
+      dispatch(authSuccess({ token, id, role }));
+      console.log("Auth state updated in Redux with token, id and role.", { token, id, role });
+      return { token, id, role };
       
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Login failed. Please try again.';
@@ -68,13 +71,14 @@ const authService = {
     
     try {
       const response = await apiClient.post(ENDPOINTS.SIGNUP, userData);
-      const { token, role } = response.data;
+      const { token, id, role } = response.data;
 
       await SecureStore.setItemAsync('userToken', token);
+      await SecureStore.setItemAsync('userId', String(id));
       await SecureStore.setItemAsync('userRole', role);
 
-      dispatch(authSuccess({ token, role }));
-      return { token, role };
+      dispatch(authSuccess({ token, id, role }));
+      return { token, id, role };
       
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Signup failed.';

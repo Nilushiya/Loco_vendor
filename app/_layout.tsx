@@ -20,11 +20,18 @@ function RootLayoutNav() {
     const bootstrapAsync = async () => {
       try {
         const savedToken = await SecureStore.getItemAsync('userToken');
+        const savedId = await SecureStore.getItemAsync('userId');
         const savedRole = await SecureStore.getItemAsync('userRole');
 
         if (savedToken && savedRole) {
           // If found, hydrate Redux state
-          dispatch(authSuccess({ token: savedToken, role: savedRole }));
+          dispatch(
+            authSuccess({
+              token: savedToken,
+              id: savedId ? Number(savedId) : null,
+              role: savedRole,
+            })
+          );
         }
       } catch (e) {
         console.error("Failed to load token", e);
