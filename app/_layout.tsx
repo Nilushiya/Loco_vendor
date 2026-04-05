@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
@@ -21,11 +20,18 @@ function RootLayoutNav() {
     const bootstrapAsync = async () => {
       try {
         const savedToken = await SecureStore.getItemAsync('userToken');
+        const savedId = await SecureStore.getItemAsync('userId');
         const savedRole = await SecureStore.getItemAsync('userRole');
 
         if (savedToken && savedRole) {
           // If found, hydrate Redux state
-          dispatch(authSuccess({ token: savedToken, role: savedRole }));
+          dispatch(
+            authSuccess({
+              token: savedToken,
+              id: savedId ? Number(savedId) : null,
+              role: savedRole,
+            })
+          );
         }
       } catch (e) {
         console.error("Failed to load token", e);
@@ -35,7 +41,7 @@ function RootLayoutNav() {
     };
 
     bootstrapAsync();
-  }, []);
+  }, [dispatch]);
 
   // 2. Role-Based Navigation Logic
   useEffect(() => {
@@ -44,28 +50,20 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const inUserGroup = segments[0] === '(user)';
 
-    const testToken = '123';
-    const testRole = 'User';
-
     const checkInitialRoute = async () => {
-      if (!testToken) {
+      if (!token) {
         if (!inAuthGroup) {
-          // router.replace('/(auth)/login' as any);
-          router.replace('/(user)' as any);
+          router.replace('/(auth)/login' as any);
         }
-      } else {
-        if (testRole === 'User' && !inUserGroup) {
-          const station = await AsyncStorage.getItem('deliveryStation');
-          if (!station) {
-            // router.replace('/form/train-details' as any);
-          } else {
-            router.replace('/(user)' as any);
-          }
-        }
+        return;
+      }
+
+      if (role === 'RESTAURANT' && !inUserGroup) {
+        router.replace('/(user)' as any);
       }
     };
     checkInitialRoute();
-  }, [token, role, isReady, segments]);
+  }, [token, role, isReady, router, segments]);
 
   // 3. Show a loading spinner while checking SecureStore
   if (!isReady) {

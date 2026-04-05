@@ -64,7 +64,7 @@ const OTPVerificationScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={{ marginTop: 20 }} onPress={() => Alert.alert("Resent", "A new OTP has been sent!")}>
-          <Text style={styles.resendText}>Didn't receive code? Resend</Text>
+          <Text style={styles.resendText}>Did not receive code? Resend</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>

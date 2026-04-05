@@ -4,12 +4,19 @@ import { Colors } from '../../constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { useDispatch } from 'react-redux';
+import { logout } from '../../redux/slices/authSlice';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const dispatch = useDispatch();
 
-  const handleLogout = () => {
-    // Implement logout logic here later
+  const handleLogout = async () => {
+    await SecureStore.deleteItemAsync('userToken');
+    await SecureStore.deleteItemAsync('userId');
+    await SecureStore.deleteItemAsync('userRole');
+    dispatch(logout());
     router.replace('/(auth)/login');
   };
 

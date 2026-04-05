@@ -1,8 +1,15 @@
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useState } from "react";
+import { AntDesign, FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,244 +17,420 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import authService from "../../api/authService";
-import { Colors } from "../../constants/theme";
-import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { AntDesign, FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
-import * as ImagePicker from "expo-image-picker";
-import * as DocumentPicker from "expo-document-picker";
+import restaurantService from "../../api/restaurantService";
+import { Colors } from "../../constants/theme";
+import { resetRegistrationState } from "../../redux/slices/restaurantRegistrationSlice";
 
-type SignupScreenProps = {
-  navigation: NativeStackNavigationProp<any>;
+const createNormalizedAsset = (asset: any, fallbackName: string) => {
+  if (!asset?.uri && !asset?.fileCopyUri) {
+    return null;
+  }
+
+  const uri = asset.fileCopyUri || asset.uri;
+  const name = asset.name || asset.fileName || fallbackName;
+  const mimeType =
+    asset.mimeType ||
+    asset.type ||
+    (name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+
+  return {
+    uri,
+    name,
+    mimeType,
+    type: mimeType,
+  };
 };
 
-const SignupScreen = ({ navigation }: SignupScreenProps) => {
+const SignupScreen = () => {
   const router = useRouter();
   const dispatch = useDispatch<any>();
-  const { isLoading } = useSelector((state: any) => state.auth);
+  const { isSubmitting, error: submitError, successMessage } = useSelector(
+    (state: any) => state.restaurantRegistration,
+  );
 
-  // Form Fields
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [locationLatitude, setLocationLatitude] = useState("");
+  const [locationLongitude, setLocationLongitude] = useState("");
 
-  // Vendor Media Upload Fields
-  const [userImg, setUserImg] = useState<any>(null);
-  const [userIdDoc, setUserIdDoc] = useState<any>(null);
-  const [shopDocument, setShopDocument] = useState<any>(null);
-  const [shopImg, setShopImg] = useState<any>(null);
+  const [restaurantImage, setRestaurantImage] = useState<any>(null);
+  const [userPicture, setUserPicture] = useState<any>(null);
+  const [userDocument, setUserDocument] = useState<any>(null);
+  const [restaurantDocument, setRestaurantDocument] = useState<any>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    return () => {
+      dispatch(resetRegistrationState());
+    };
+  }, [dispatch]);
+
   const validate = () => {
-    let newErrors: Record<string, string> = {};
+    const nextErrors: Record<string, string> = {};
+    const latitude = Number(locationLatitude);
+    const longitude = Number(locationLongitude);
 
-    // Core User Info Validations
-    if (!username) {
-      newErrors.username = "Username is required";
-    } else if (username.length < 3) {
-      newErrors.username = "Minimum 3 characters required";
-    } else if (!/^[a-zA-Z0-9 ]+$/.test(username)) {
-      newErrors.username = "Only letters and numbers allowed";
+    if (!name.trim()) nextErrors.name = "Restaurant name is required";
+    if (!address.trim()) nextErrors.address = "Address is required";
+
+    if (!email.trim()) {
+      nextErrors.email = "Email is required";
+    } else if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      nextErrors.email = "Invalid email format";
     }
 
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!/^\S+@\S+\.\S+$/.test(email)) {
-      newErrors.email = "Invalid email format";
-    }
+    if (!phoneNumber.trim()) nextErrors.phoneNumber = "Phone number is required";
 
     if (!password) {
-      newErrors.password = "Password is required";
+      nextErrors.password = "Password is required";
     } else if (password.length < 8) {
-      newErrors.password = "Minimum 8 characters required";
-    } 
-    // [else if (
-    //   !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(password)
-    // ) {
-    //   newErrors.password =
-    //     "Must include uppercase, lowercase, number & special character";
-    // }]
-
-    if (!confirmPassword) {
-      newErrors.confirmPassword = "Confirm password is required";
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      nextErrors.password = "Password must be at least 8 characters";
     }
 
-    // Media & Document Validations
-    if (!userImg) newErrors.userImg = "User Image is required";
-    if (!userIdDoc) newErrors.userIdDoc = "User ID Document is required";
-    if (!shopDocument) newErrors.shopDocument = "Shop Document is required";
-    if (!shopImg) newErrors.shopImg = "Shop Image is required";
+    if (!locationLatitude.trim()) {
+      nextErrors.locationLatitude = "Latitude is required";
+    } else if (Number.isNaN(latitude)) {
+      nextErrors.locationLatitude = "Latitude must be a valid number";
+    }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!locationLongitude.trim()) {
+      nextErrors.locationLongitude = "Longitude is required";
+    } else if (Number.isNaN(longitude)) {
+      nextErrors.locationLongitude = "Longitude must be a valid number";
+    }
+
+    if (!restaurantImage) nextErrors.restaurantImage = "Restaurant image is required";
+    if (!userPicture) nextErrors.userPicture = "User picture is required";
+    if (!userDocument) nextErrors.userDocument = "User document is required";
+    if (!restaurantDocument) {
+      nextErrors.restaurantDocument = "Restaurant document is required";
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const pickImage = async (setter: React.Dispatch<React.SetStateAction<any>>) => {
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Permission Required", "Please allow photo library access.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.8,
     });
-    if (!result.canceled) setter(result.assets[0]);
+
+    if (!result.canceled && result.assets?.length) {
+      setter(createNormalizedAsset(result.assets[0], "image.jpg"));
+    }
   };
 
-  const pickDocument = async (setter: React.Dispatch<React.SetStateAction<any>>) => {
-    let result = await DocumentPicker.getDocumentAsync({
-      type: "*/*",
+  const pickDocument = async (
+    setter: React.Dispatch<React.SetStateAction<any>>,
+  ) => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["image/*", "application/pdf"],
       copyToCacheDirectory: true,
+      multiple: false,
     });
-    if (!result.canceled) setter(result.assets[0]);
+
+    if (!result.canceled && result.assets?.length) {
+      setter(createNormalizedAsset(result.assets[0], "document.pdf"));
+    }
+  };
+
+  const resetForm = () => {
+    setName("");
+    setAddress("");
+    setEmail("");
+    setPhoneNumber("");
+    setPassword("");
+    setLocationLatitude("");
+    setLocationLongitude("");
+    setRestaurantImage(null);
+    setUserPicture(null);
+    setUserDocument(null);
+    setRestaurantDocument(null);
+    setErrors({});
   };
 
   const handleRegister = async () => {
     if (!validate()) {
-      Alert.alert("Validation Error", "Please fill all required fields appropriately.");
       return;
     }
 
     try {
-      // Navigate directly to login after successful register
-      Alert.alert("Success", "Account created successfully!");
-      router.push("/(auth)/login");
-
-    } catch (error: any) {
-      Alert.alert(
-        "Register Failed",
-        error?.response?.data?.message || "Something went wrong",
+      await dispatch(
+        restaurantService.registerRestaurant({
+          name,
+          address,
+          email,
+          phoneNumber,
+          password,
+          locationLatitude: Number(locationLatitude),
+          locationLongitude: Number(locationLongitude),
+          image: restaurantImage,
+          userPicture,
+          userDocument,
+          restaurantDocument,
+        }),
       );
+      resetForm();
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unable to complete registration.";
+
+      if (!error?.response) {
+        Alert.alert("Network Error", "Please check your connection and try again.");
+        return;
+      }
+
+      Alert.alert("Registration Failed", message);
     }
   };
 
+  const getSelectedName = (asset: any, placeholder: string) =>
+    asset?.name || asset?.fileName || placeholder;
+
+  const renderUploadStatus = (asset: any, placeholder: string) =>
+    asset ? `Selected: ${getSelectedName(asset, placeholder)}` : placeholder;
+
   return (
-    <LinearGradient colors={["#FEEDE6", "#FFFFFF"]} style={styles.gradient}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingVertical: 40 }}
-      >
-        <View style={styles.card}>
-          <Image
-            source={require("../../assets/logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+    <LinearGradient colors={["#FFF4EE", "#FFE2D3", "#FFF9F5"]} style={styles.gradient}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={styles.topGlow} />
+          <View style={styles.bottomGlow} />
 
-          <Text style={styles.title}>Vendor Registration</Text>
-
-          {/* Account Details */}
-          <TextInput
-            placeholder="Username"
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-          />
-          {errors.username && <Text style={styles.error}>{errors.username}</Text>}
-
-          <TextInput
-            placeholder="Email"
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-
-          {/* Media / Documents Section */}
-          <View style={styles.uploadSection}>
-            <Text style={styles.sectionTitle}>Vendor Documents</Text>
-
-            <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage(setUserImg)}>
-              <MaterialIcons name="photo-camera" size={20} color={Colors.default.primary} />
-              <Text style={styles.uploadBtnText}>
-                {userImg ? "User Image Selected ✔" : "Upload User Image"}
-              </Text>
-            </TouchableOpacity>
-            {errors.userImg && <Text style={styles.error}>{errors.userImg}</Text>}
-
-            <TouchableOpacity style={styles.uploadBtn} onPress={() => pickDocument(setUserIdDoc)}>
-              <FontAwesome name="id-card-o" size={20} color={Colors.default.primary} />
-              <Text style={styles.uploadBtnText}>
-                {userIdDoc ? "User ID Document Selected ✔" : "Upload User ID"}
-              </Text>
-            </TouchableOpacity>
-            {errors.userIdDoc && <Text style={styles.error}>{errors.userIdDoc}</Text>}
-
-            <TouchableOpacity style={styles.uploadBtn} onPress={() => pickDocument(setShopDocument)}>
-              <MaterialIcons name="description" size={20} color={Colors.default.primary} />
-              <Text style={styles.uploadBtnText}>
-                {shopDocument ? "Shop Document Selected ✔" : "Upload Shop Document"}
-              </Text>
-            </TouchableOpacity>
-            {errors.shopDocument && <Text style={styles.error}>{errors.shopDocument}</Text>}
-
-            <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage(setShopImg)}>
-              <MaterialIcons name="store" size={20} color={Colors.default.primary} />
-              <Text style={styles.uploadBtnText}>
-                {shopImg ? "Shop Image Selected ✔" : "Upload Shop Image"}
-              </Text>
-            </TouchableOpacity>
-            {errors.shopImg && <Text style={styles.error}>{errors.shopImg}</Text>}
-          </View>
-
-          {/* Passwords */}
-          <TextInput
-            placeholder="Password"
-            secureTextEntry
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-          />
-          {errors.password && <Text style={styles.error}>{errors.password}</Text>}
-
-          <TextInput
-            placeholder="Confirm Password"
-            secureTextEntry
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-          {errors.confirmPassword && (
-            <Text style={styles.error}>{errors.confirmPassword}</Text>
-          )}
-
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={isLoading}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.buttonText}>
-              {isLoading ? "Processing..." : "Register & Get OTP"}
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.heroBlock}>
+              <Image
+                source={require("../../assets/logo.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Create Restaurant Account</Text>
+              <Text style={styles.subtitle}>
+                Complete the form below and upload all required business documents.
+              </Text>
+            </View>
 
-          <View style={styles.linewithtext}>
-            <View style={styles.line} />
-            <Text style={styles.text}>or</Text>
-            <View style={styles.line} />
-          </View>
-          <Text style={styles.otherSignIn}>Sign in with</Text>
-          <View style={styles.otherSignInicon}>
-            <TouchableOpacity style={[styles.iconButton, { backgroundColor: "#3b5998" }]}>
-              <FontAwesome name="facebook-f" size={18} color="white" />
+            <View style={styles.card}>
+              <Text style={styles.sectionLabel}>Registration Details</Text>
+
+              {submitError ? <Text style={styles.submitError}>{submitError}</Text> : null}
+              {successMessage ? (
+                <View style={styles.successBanner}>
+                  <Text style={styles.successText}>{successMessage}</Text>
+                  <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+                    <Text style={styles.successLink}>Continue to Sign In</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              <TextInput
+                placeholder="Restaurant Name"
+                placeholderTextColor="#9A8F88"
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+              />
+              {errors.name ? <Text style={styles.error}>{errors.name}</Text> : null}
+
+              <TextInput
+                placeholder="Restaurant Address"
+                placeholderTextColor="#9A8F88"
+                style={[styles.input, styles.textArea]}
+                value={address}
+                onChangeText={setAddress}
+                multiline
+                textAlignVertical="top"
+              />
+              {errors.address ? <Text style={styles.error}>{errors.address}</Text> : null}
+
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor="#9A8F88"
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email ? <Text style={styles.error}>{errors.email}</Text> : null}
+
+              <TextInput
+                placeholder="Phone Number"
+                placeholderTextColor="#9A8F88"
+                style={styles.input}
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                keyboardType="phone-pad"
+              />
+              {errors.phoneNumber ? (
+                <Text style={styles.error}>{errors.phoneNumber}</Text>
+              ) : null}
+
+              <TextInput
+                placeholder="Password"
+                placeholderTextColor="#9A8F88"
+                secureTextEntry
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+              />
+              {errors.password ? <Text style={styles.error}>{errors.password}</Text> : null}
+
+              <View style={styles.coordinateRow}>
+                <View style={styles.coordinateField}>
+                  <TextInput
+                    placeholder="Latitude"
+                    placeholderTextColor="#9A8F88"
+                    style={styles.input}
+                    value={locationLatitude}
+                    onChangeText={setLocationLatitude}
+                    keyboardType="numeric"
+                  />
+                  {errors.locationLatitude ? (
+                    <Text style={styles.error}>{errors.locationLatitude}</Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.coordinateField}>
+                  <TextInput
+                    placeholder="Longitude"
+                    placeholderTextColor="#9A8F88"
+                    style={styles.input}
+                    value={locationLongitude}
+                    onChangeText={setLocationLongitude}
+                    keyboardType="numeric"
+                  />
+                  {errors.locationLongitude ? (
+                    <Text style={styles.error}>{errors.locationLongitude}</Text>
+                  ) : null}
+                </View>
+              </View>
+
+              <View style={styles.uploadSection}>
+                <Text style={styles.uploadHeading}>Required Uploads</Text>
+
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  onPress={() => pickImage(setRestaurantImage)}
+                >
+                  <MaterialIcons
+                    name="storefront"
+                    size={20}
+                    color={Colors.default.primary}
+                  />
+                <Text style={styles.uploadBtnText}>
+                  {renderUploadStatus(restaurantImage, "Select Restaurant Image")}
+                </Text>
+              </TouchableOpacity>
+                {errors.restaurantImage ? (
+                  <Text style={styles.error}>{errors.restaurantImage}</Text>
+                ) : null}
+
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  onPress={() => pickImage(setUserPicture)}
+                >
+                  <MaterialIcons
+                    name="photo-camera"
+                    size={20}
+                    color={Colors.default.primary}
+                  />
+                <Text style={styles.uploadBtnText}>
+                  {renderUploadStatus(userPicture, "Select User Picture")}
+                </Text>
+              </TouchableOpacity>
+                {errors.userPicture ? (
+                  <Text style={styles.error}>{errors.userPicture}</Text>
+                ) : null}
+
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  onPress={() => pickDocument(setUserDocument)}
+                >
+                  <FontAwesome
+                    name="id-card-o"
+                    size={20}
+                    color={Colors.default.primary}
+                  />
+                <Text style={styles.uploadBtnText}>
+                  {renderUploadStatus(userDocument, "Select User Document")}
+                </Text>
+              </TouchableOpacity>
+                {errors.userDocument ? (
+                  <Text style={styles.error}>{errors.userDocument}</Text>
+                ) : null}
+
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  onPress={() => pickDocument(setRestaurantDocument)}
+                >
+                  <MaterialIcons
+                    name="description"
+                    size={20}
+                    color={Colors.default.primary}
+                  />
+                <Text style={styles.uploadBtnText}>
+                  {renderUploadStatus(
+                    restaurantDocument,
+                    "Select Restaurant Document",
+                  )}
+                </Text>
+              </TouchableOpacity>
+                {errors.restaurantDocument ? (
+                  <Text style={styles.error}>{errors.restaurantDocument}</Text>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                onPress={handleRegister}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Register Restaurant</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already registered?</Text>
+            <TouchableOpacity
+              style={styles.footerButton}
+              onPress={() => router.push("/(auth)/login")}
+            >
+              <AntDesign name="arrowup" size={14} color={Colors.default.primary} />
+              <Text style={styles.footerButtonText}>Go to Sign In</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.iconButton, { backgroundColor: "#ff8c00" }]}>
-              <MaterialIcons name="email" size={18} color="white" />
-            </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-      <View style={styles.SignupBtn}>
-        <TouchableOpacity onPress={() => router.push("/login")}>
-          <AntDesign name="up" size={15} color="white" style={styles.upArrow} />
-          <Text style={[styles.signup, { color: "white" }]}>Sign In</Text>
-        </TouchableOpacity>
-      </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </LinearGradient>
   );
 };
@@ -255,79 +438,170 @@ const SignupScreen = ({ navigation }: SignupScreenProps) => {
 export default SignupScreen;
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   gradient: {
     flex: 1,
   },
-  card: {
-    padding: 25,
-    borderRadius: 20,
+  safeArea: {
+    flex: 1,
+  },
+  topGlow: {
+    position: "absolute",
+    top: -90,
+    right: -20,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(255, 90, 31, 0.14)",
+  },
+  bottomGlow: {
+    position: "absolute",
+    bottom: 120,
+    left: -60,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "rgba(255, 171, 137, 0.18)",
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+  heroBlock: {
+    alignItems: "center",
+    marginBottom: 16,
   },
   logo: {
-    width: 200,
-    height: 120, // slightly smaller so form fits nicely
-    alignSelf: "center",
-    marginBottom: 10,
+    width: 170,
+    height: 118,
+    marginBottom: 8,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 26,
+    fontWeight: "800",
     textAlign: "center",
+    color: "#221813",
+    marginBottom: 8,
+  },
+  subtitle: {
+    textAlign: "center",
+    color: "#6C5E57",
+    lineHeight: 21,
+    paddingHorizontal: 16,
+  },
+  card: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.88)",
+    shadowColor: "#A3471E",
+    shadowOpacity: 0.14,
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 24,
+    elevation: 7,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
     color: Colors.default.primary,
-    marginBottom: 20,
+    marginBottom: 14,
+  },
+  submitError: {
+    color: "#B42318",
+    backgroundColor: "#FEE4E2",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 14,
+  },
+  successBanner: {
+    backgroundColor: "#E8FFF3",
+    borderColor: "#A6F4C5",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 14,
+  },
+  successText: {
+    color: "#067647",
+    fontWeight: "600",
+  },
+  successLink: {
+    color: Colors.default.primary,
+    fontWeight: "700",
+    marginTop: 6,
   },
   error: {
-    color: "red",
+    color: "#C62828",
     fontSize: 12,
     marginTop: 2,
-    marginLeft: 10,
-    marginBottom: 5, // added margin bottom to space fields visually
+    marginLeft: 6,
+    marginBottom: 4,
   },
   input: {
-    backgroundColor: Colors.default.white,
-    borderRadius: 30,
-    paddingHorizontal: 20,
-    height: 45, // slightly larger touch area
+    backgroundColor: "#FFF7F3",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    height: 54,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: Colors.default.gray,
+    borderColor: "#F2D6CA",
+    color: Colors.default.text,
+  },
+  textArea: {
+    height: 96,
+    paddingTop: 14,
+  },
+  coordinateRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  coordinateField: {
+    flex: 1,
   },
   uploadSection: {
-    marginVertical: 15,
-    padding: 15,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "#EAEAEA",
+    marginTop: 14,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: Colors.default.primary,
-    marginBottom: 10,
+  uploadHeading: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#4E3E37",
+    marginBottom: 8,
   },
   uploadBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.default.white,
-    padding: 12,
-    borderRadius: 25,
+    backgroundColor: "#FFF7F3",
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: Colors.default.gray,
+    borderColor: "#F2D6CA",
     marginBottom: 8,
   },
   uploadBtnText: {
-    color: "#555",
+    color: "#5E524C",
     fontSize: 14,
     marginLeft: 10,
     flex: 1,
   },
   button: {
     backgroundColor: Colors.default.primary,
-    height: 45,
-    borderRadius: 30,
+    height: 54,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 20,
+    shadowColor: Colors.default.primary,
+    shadowOpacity: 0.24,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+    elevation: 5,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -335,66 +609,38 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
-  signup: {
-    textAlign: "center",
-    color: Colors.default.primary,
-    fontWeight: "500",
-    marginBottom: 7,
-  },
-  linewithtext: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 30,
-    marginRight: 30,
-    marginTop: 20,
-  },
-  line: {
-    flex: 1,
-    height: 1.5,
-    backgroundColor: Colors.default.primary,
-  },
-  text: {
-    fontSize: 16,
-    color: "black",
-    marginBottom: 5,
-  },
-  otherSignIn: {
-    color: Colors.default.primary,
-    textAlign: "center",
-    fontSize: 14,
-    marginTop: 8,
-  },
-  otherSignInicon: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
+  footer: {
+    marginHorizontal: 20,
+    marginBottom: 8,
     marginTop: 10,
-  },
-  iconButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 25,
-    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.88)",
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
     alignItems: "center",
-    marginRight: 10,
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)",
   },
-  SignupBtn: {
-    paddingVertical: 15,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    backgroundColor: Colors.default.primary,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  footerText: {
+    color: "#6F625C",
+    fontSize: 14,
+    fontWeight: "600",
   },
-  upArrow: {
-    flex: 1,
-    textAlign: "center",
-    justifyContent: "center",
+  footerButton: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 5,
+    gap: 6,
+    backgroundColor: "#FFF1EA",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  footerButtonText: {
+    color: Colors.default.primary,
+    fontWeight: "700",
   },
 });
